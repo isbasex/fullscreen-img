@@ -11,7 +11,7 @@ document.body.addEventListener('click', (evt) => {
   if (evt.target.nodeName === 'IMG') {
     previewImageInFullscreen(target)
   }
-})
+}, true)
 ```
 
 ## Options
@@ -23,5 +23,5 @@ document.body.addEventListener('click', (evt) => {
       maskBackgroundColor: '#fff'
     })
   }
-})
+}, true)
 ```
