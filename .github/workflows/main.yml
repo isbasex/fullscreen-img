@@ -7,26 +7,34 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node: ['10.x', '12.x', '14.x']
+        node: ['14.x', '16.x', '18.x']
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@master
+        id: pnpm-install
+        with:
+          version: 7
+          run_install: false
+
       - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@master
         with:
           node-version: ${{ matrix.node }}
+          cache: 'pnpm'
 
       - name: Install deps and build (with cache)
-        uses: bahmutov/npm-install@v1
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: yarn lint
+        run: pnpm lint
 
       - name: Test
-        run: yarn test --ci --coverage --maxWorkers=2
+        run: pnpm test
 
       - name: Build
-        run: yarn build
+        run: pnpm build
