@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview Image in Fullscreen Test</title>
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+      }
+      img {
+        cursor: pointer;
+        margin: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <img
+      src="https://via.placeholder.com/500x300"
+      alt="Example Image"
+      id="example-image"
+      width="500"
+    />
+
+    <script src="../dist/fullscreen-img.umd.development.js"></script>
+    <script>
+      const { previewImageInFullscreen } = window['fullscreen-img']
+
+      const imgEl = document.getElementById('example-image')
+      imgEl.addEventListener('click', function () {
+        previewImageInFullscreen(imgEl)
+      })
+    </script>
+  </body>
+</html>
