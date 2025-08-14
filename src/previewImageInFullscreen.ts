@@ -53,7 +53,7 @@ export function previewImageInFullscreen(
     // 修改：使用原始位置，而不是当前 getBoundingClientRect()
     const imgRect = originalRect
 
-    // 全屏缩放后的坐标
+    // 全屏缩放后的坐标（假设从原始位置中心缩放）
     const scaledX = imgRect.left - (scaledWidth - imageWidth) / 2
     const scaledY = imgRect.top - (scaledHeight - imageHeight) / 2
 
@@ -126,39 +126,84 @@ export function previewImageInFullscreen(
     imgEl.ontransitionend = prevOnTransitionEnd
     imgEl.addEventListener('click', close)
     window.addEventListener('keydown', onPressEsc)
-    window.addEventListener('resize', onResize) // 修改：启用 resize 监听
+    window.addEventListener('resize', onResize)  // 修改：启用 resize 监听
   }
 
   function close() {
+    // 先获取当前全屏后的矩形
+    const currentRect = imgEl.getBoundingClientRect()
+
     mask.style.opacity = '0'
     mask.ontransitionend = () => {
       mask.ontransitionend = null
       document.body.removeChild(mask)
     }
 
-    imgEl.style.cursor = prevStyle.cursor || ''
-    imgEl.style.transform = 'none'
-    imgEl.ontransitionend = () => {
-      imgEl.ontransitionend = null
-      // 直接给 imgEl.style.xxx 赋值 undefined 的话没有任何效果，赋值空字符才能删掉此属性
-      imgEl.style.transition = prevStyle.transition || ''
-      imgEl.style.position = prevStyle.position || ''
-      imgEl.style.zIndex = prevStyle.zIndex || ''
-      imgEl.style.transform = prevStyle.transform || ''
-      imgEl.style.left = prevStyle.left || ''
-      imgEl.style.top = prevStyle.top || ''
-      imgEl.style.width = prevStyle.width || ''
-      imgEl.style.height = prevStyle.height || ''
-      imgEl.removeAttribute(KEY_PREVIEWED)
-    }
-
+    // 恢复 body 样式，允许页面重排
     document.body.style.minHeight = prevBodyMinHeight
     document.body.style.overflow = prevBodyOverflow
     document.documentElement.style.overflow = prevHtmlOverflow
 
+    // 临时设置无过渡，恢复原始样式以获取目标矩形
+    imgEl.style.transition = 'none'
+    imgEl.style.position = prevStyle.position || ''
+    imgEl.style.left = prevStyle.left || ''
+    imgEl.style.top = prevStyle.top || ''
+    imgEl.style.width = prevStyle.width || ''
+    imgEl.style.height = prevStyle.height || ''
+    imgEl.style.transform = prevStyle.transform || ''
+    imgEl.style.zIndex = prevStyle.zIndex || ''
+    imgEl.style.cursor = prevStyle.cursor || ''
+
+    // 强制重排
+    imgEl.offsetHeight // force reflow
+
+    // 获取目标矩形（关闭后的位置和大小）
+    const targetRect = imgEl.getBoundingClientRect()
+
+    // 设置回 fixed 模式，使用目标位置和大小作为基础
+    imgEl.style.position = 'fixed'
+    imgEl.style.left = `${targetRect.left}px`
+    imgEl.style.top = `${targetRect.top}px`
+    imgEl.style.width = `${targetRect.width}px`
+    imgEl.style.height = `${targetRect.height}px`
+    imgEl.style.zIndex = String(imgIndex)
+    imgEl.style.cursor = 'zoom-out'
+
+    // 计算初始 transform，使其匹配当前全屏位置（无过渡）
+    const scale = currentRect.width / targetRect.width
+    const centerCurrentX = currentRect.left + currentRect.width / 2
+    const centerCurrentY = currentRect.top + currentRect.height / 2
+    const centerTargetX = targetRect.left + targetRect.width / 2
+    const centerTargetY = targetRect.top + targetRect.height / 2
+    const tx = centerCurrentX - centerTargetX
+    const ty = centerCurrentY - centerTargetY
+    imgEl.style.transform = `translate3d(${tx}px, ${ty}px, 0px) scale(${scale}, ${scale})`
+
+    // 在下一帧设置过渡并动画回 scale(1) translate(0)
+    window.requestAnimationFrame(() => {
+      imgEl.style.transition = `transform 0.4s cubic-bezier(0.4, 0, 0, 1) 0s`
+      imgEl.style.transform = `translate3d(0px, 0px, 0px) scale(1, 1)`
+    })
+
+    // 在动画结束后，恢复原始样式（位置不变，无跳动）
+    imgEl.ontransitionend = () => {
+      imgEl.ontransitionend = null
+      imgEl.style.transition = prevStyle.transition || ''
+      imgEl.style.position = prevStyle.position || ''
+      imgEl.style.left = prevStyle.left || ''
+      imgEl.style.top = prevStyle.top || ''
+      imgEl.style.width = prevStyle.width || ''
+      imgEl.style.height = prevStyle.height || ''
+      imgEl.style.zIndex = prevStyle.zIndex || ''
+      imgEl.style.cursor = prevStyle.cursor || ''
+      imgEl.style.transform = prevStyle.transform || ''
+      imgEl.removeAttribute(KEY_PREVIEWED)
+    }
+
     imgEl.removeEventListener('click', close)
     window.removeEventListener('keydown', onPressEsc)
-    window.removeEventListener('resize', onResize) // 修改：移除 resize 监听
+    window.removeEventListener('resize', onResize)  // 修改：移除 resize 监听
   }
 
   function onPressEsc(evt: KeyboardEvent) {
