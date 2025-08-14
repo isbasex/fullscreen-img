@@ -16,6 +16,9 @@ export function previewImageInFullscreen(
 
   let timer: number | null = null
 
+  // 新增：记录原始位置和大小（在设置 transform 前）
+  const originalRect = imgEl.getBoundingClientRect()
+
   // @ts-ignore
   function onResize() {
     if (timer) {
@@ -28,9 +31,9 @@ export function previewImageInFullscreen(
   }
 
   function updateImagePositionAndScale(imgEl: HTMLImageElement) {
-    // 图片原始宽高，不受缩放影响
-    const imageWidth = imgEl.width
-    const imageHeight = imgEl.height
+    // 修改：使用原始大小，而不是当前 imgEl.width（避免受 transform 影响）
+    const imageWidth = originalRect.width
+    const imageHeight = originalRect.height
     const maxWidth = window.innerWidth
     const maxHeight = window.innerHeight
 
@@ -47,8 +50,8 @@ export function previewImageInFullscreen(
     const scaledWidth = imageWidth * ratio
     const scaledHeight = imageHeight * ratio
 
-    // 图片当前坐标和宽高（放大和偏移之前）
-    const imgRect = imgEl.getBoundingClientRect()
+    // 修改：使用原始位置，而不是当前 getBoundingClientRect()
+    const imgRect = originalRect
 
     // 全屏缩放后的坐标
     const scaledX = imgRect.left - (scaledWidth - imageWidth) / 2
@@ -102,10 +105,18 @@ export function previewImageInFullscreen(
     zIndex: inlineStyle.zIndex,
     cursor: inlineStyle.cursor,
     transform: inlineStyle.transform,
+    left: inlineStyle.left,
+    top: inlineStyle.top,
+    width: inlineStyle.width,
+    height: inlineStyle.height,
   }
   imgEl.setAttribute(KEY_PREVIEWED, '1')
   imgEl.style.transition = `transform 0.4s cubic-bezier(0.4, 0, 0, 1) 0s`
-  imgEl.style.position = 'relative'
+  imgEl.style.position = 'fixed'
+  imgEl.style.left = `${originalRect.left}px`
+  imgEl.style.top = `${originalRect.top}px`
+  imgEl.style.width = `${originalRect.width}px`
+  imgEl.style.height = `${originalRect.height}px`
   imgEl.style.cursor = 'zoom-out'
   imgEl.style.zIndex = String(imgIndex)
   updateImagePositionAndScale(imgEl)
@@ -115,7 +126,7 @@ export function previewImageInFullscreen(
     imgEl.ontransitionend = prevOnTransitionEnd
     imgEl.addEventListener('click', close)
     window.addEventListener('keydown', onPressEsc)
-    // window.addEventListener('resize', onResize)
+    window.addEventListener('resize', onResize) // 修改：启用 resize 监听
   }
 
   function close() {
@@ -134,6 +145,10 @@ export function previewImageInFullscreen(
       imgEl.style.position = prevStyle.position || ''
       imgEl.style.zIndex = prevStyle.zIndex || ''
       imgEl.style.transform = prevStyle.transform || ''
+      imgEl.style.left = prevStyle.left || ''
+      imgEl.style.top = prevStyle.top || ''
+      imgEl.style.width = prevStyle.width || ''
+      imgEl.style.height = prevStyle.height || ''
       imgEl.removeAttribute(KEY_PREVIEWED)
     }
 
@@ -143,7 +158,7 @@ export function previewImageInFullscreen(
 
     imgEl.removeEventListener('click', close)
     window.removeEventListener('keydown', onPressEsc)
-    // window.removeEventListener('resize', onResize)
+    window.removeEventListener('resize', onResize) // 修改：移除 resize 监听
   }
 
   function onPressEsc(evt: KeyboardEvent) {
